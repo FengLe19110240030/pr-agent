@@ -20,6 +20,156 @@ fengle  https://github.com/FengLe19110240030/pr-agent.git (push)
 origin  https://github.com/The-PR-Agent/pr-agent.git (fetch)
 origin  https://github.com/The-PR-Agent/pr-agent.git (push)
 ```
+## 1. 首次拉取远程代码并配置 GitHub Classic Token
+
+适用场景：使用 HTTPS 远程地址从 GitHub 拉代码，并把 GitHub personal access token classic 缓存在本机，后续 `git pull` 和 `git push` 不用每次重新输入。
+
+重要：不要把 token 写进 `git_ops.md`、代码、提交记录、shell 历史或 remote URL。GitHub 官方文档说明，personal access token 可以在命令行里代替密码使用；输入用户名和密码时，用户名填 GitHub 用户名，密码位置填 token。
+
+### 1.1 创建 classic token
+
+在浏览器打开 GitHub：
+
+```text
+头像 -> Settings -> Developer settings -> Personal access tokens -> Tokens (classic) -> Generate new token -> Generate new token (classic)
+```
+
+建议填写：
+
+```text
+Note: local-git-pr-agent
+Expiration: 选择一个明确过期时间，例如 90 days 或 1 year
+Scopes:
+  public_repo  # 只推送公开仓库时通常够用
+  repo         # 需要访问私有仓库时使用，权限更大
+  workflow     # 如果要修改并推送 .github/workflows/ 下的工作流文件，再勾选
+```
+
+生成后只会显示一次，复制后放到临时的密码管理器或系统剪贴板里。不要保存到仓库文件。
+
+官方参考：
+
+```text
+https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+https://docs.github.com/en/get-started/git-basics/caching-your-github-credentials-in-git
+```
+
+### 1.2 确认远程地址使用 HTTPS
+
+```bash
+git remote -v
+```
+
+如果远程地址不是 HTTPS，可以改成 HTTPS。这里以个人 fork `fengle` 为例：
+
+```bash
+git remote set-url fengle https://github.com/FengLe19110240030/pr-agent.git
+```
+
+如果还没有克隆仓库，可以直接从远程拉取一份：
+
+```bash
+git clone https://github.com/FengLe19110240030/pr-agent.git
+cd pr-agent
+```
+
+如果要保留上游仓库作为只读同步源：
+
+```bash
+git remote add origin https://github.com/The-PR-Agent/pr-agent.git
+git remote -v
+```
+
+### 1.3 配置凭据缓存
+
+macOS 推荐使用系统 Keychain。先确认是否可用：
+
+```bash
+git credential-osxkeychain
+```
+
+如果输出用法说明，说明可用，然后配置：
+
+```bash
+git config --global credential.helper osxkeychain
+```
+
+也可以使用 Git Credential Manager。安装完成后，GitHub 凭据会保存到系统凭据管理器里：
+
+```bash
+brew install --cask git-credential-manager
+```
+
+### 1.4 第一次拉取远程代码
+
+进入仓库目录：
+
+```bash
+cd /Users/fengle/code/PycharmProjects/pr-agent
+```
+
+查看远程和分支：
+
+```bash
+git remote -v
+git status --short --branch
+```
+
+从个人 fork 拉取 `main`：
+
+```bash
+git fetch fengle --prune
+git switch main
+git pull --ff-only fengle main
+```
+
+如果要先同步上游官方仓库，再推回自己的 fork：
+
+```bash
+git fetch origin --prune
+git switch main
+git merge --ff-only origin/main
+git push fengle main
+```
+
+### 1.5 第一次 push 时输入 token
+
+推送到个人 fork：
+
+```bash
+git push fengle main
+```
+
+如果 Git 提示输入用户名和密码：
+
+```text
+Username for 'https://github.com': FengLe19110240030
+Password for 'https://FengLe19110240030@github.com': 粘贴 classic token
+```
+
+输入成功后，凭据 helper 会把 token 缓存在本机。后续通常可以直接运行：
+
+```bash
+git pull
+git push
+```
+
+### 1.6 更新或清除旧 token
+
+如果 token 过期、被 revoke，或者输错后被缓存，可以清除 GitHub 的旧凭据，再重新 `git pull` 或 `git push` 触发输入。
+
+macOS Keychain：
+
+```bash
+git credential-osxkeychain erase
+host=github.com
+protocol=https
+
+```
+
+注意最后需要输入一个空行来提交 erase 请求。
+
+也可以打开“钥匙串访问”，搜索 `github.com`，删除对应的 Internet password 条目。
 
 ## 1. 查看仓库状态
 
